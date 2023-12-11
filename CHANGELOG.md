@@ -1,3 +1,7 @@
+## 1.2.2
+
+* Upgraded all dependencies to their latest versions
+
 ## 1.1.0
 
 * Added support for certificate chains ([#3](https://github.com/gazoakley/nodemailer-smime/pull/3))
