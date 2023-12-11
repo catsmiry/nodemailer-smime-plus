@@ -1,25 +1,20 @@
 # Nodemailer plugin to sign mail using S/MIME
 
-[![Build Status](https://travis-ci.org/gazoakley/nodemailer-smime.svg?branch=master)](https://travis-ci.org/gazoakley/nodemailer-smime)
-[![Coverage Status](https://coveralls.io/repos/github/gazoakley/nodemailer-smime/badge.svg?branch=master)](https://coveralls.io/github/gazoakley/nodemailer-smime?branch=master)
-[![Greenkeeper badge](https://badges.greenkeeper.io/gazoakley/nodemailer-smime.svg)](https://greenkeeper.io/)
-[![dependencies Status](https://david-dm.org/gazoakley/nodemailer-smime/status.svg)](https://david-dm.org/gazoakley/nodemailer-smime)
-[![devDependencies Status](https://david-dm.org/gazoakley/nodemailer-smime/dev-status.svg)](https://david-dm.org/gazoakley/nodemailer-smime?type=dev)
-
-This plugin signs mail using an S/MIME certificate. Many mail agents are able to decode these in order to prove the identity of the sender.
+This is an up-to-date version of the original [nodemailer-smime](https://github.com/gazoakley/nodemailer-smime)
+package.
 
 ## Install
 
 Install from npm
 
-    npm install nodemailer-smime --save
+    npm install nodemailer-smime-plus --save
 
 ## Usage
 
-Load the `nodemailer-smime` plugin
+Load the `nodemailer-smime-plus` plugin
 
 ```javascript
-const smime = require('nodemailer-smime');
+const smime = require('nodemailer-smime-plus');
 ```
 
 Attach it as a 'stream' handler for a nodemailer transport object
@@ -38,7 +33,7 @@ transporter.use('stream', htmlToText(options));
 
 ```javascript
 const nodemailer = require('nodemailer');
-const smime = require('nodemailer-smime');
+const smime = require('nodemailer-smime-plus');
 const transporter = nodemailer.createTransport();
 const options = {
     cert: '<PEM formatted cert>',
