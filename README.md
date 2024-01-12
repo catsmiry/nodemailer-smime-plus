@@ -20,7 +20,14 @@ const smime = require('nodemailer-smime-plus');
 Attach it as a 'stream' handler for a nodemailer transport object
 
 ```javascript
-transporter.use('stream', htmlToText(options));
+const options = {
+    cert: '<PEM formatted cert>',
+    chain: [
+      '<PEM formatted cert>'
+    ],
+    key: '<PEM formatted key>'
+}
+transporter.use('stream', smime(options));
 ```
 
 ## Options
