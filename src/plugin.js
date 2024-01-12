@@ -1,17 +1,7 @@
-'use strict';
+import forge from 'node-forge';
+import MimeNode from 'nodemailer/lib/mime-node';
 
-const forge = require('node-forge');
-const MimeNode = require('nodemailer/lib/mime-node');
-
-const newline = /\r\n|\r|\n/g;
-function canonicalTransform(node) {
-  if (node.getHeader('content-type').slice(0, 5) === 'text/' && node.content) {
-    node.content = node.content.replace(newline, '\r\n');
-  }
-  node.childNodes.forEach(canonicalTransform);
-}
-
-module.exports = function (options) {
+export default function (options) {
   return function (mail, callback) {
     // Create new root node
     const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
@@ -85,4 +75,11 @@ module.exports = function (options) {
       callback();
     });
   };
-};
+}
+
+function canonicalTransform(node) {
+  if (node.getHeader('content-type').slice(0, 5) === 'text/' && node.content) {
+    node.content = node.content.replace(/\r\n|\r|\n/g, '\r\n');
+  }
+  node.childNodes.forEach(canonicalTransform);
+}
