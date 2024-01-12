@@ -1,5 +1,5 @@
 import forge from 'node-forge';
-import MimeNode from 'nodemailer/lib/mime-node';
+import MimeNode from 'nodemailer/lib/mime-node/index.js';
 
 export default function (options) {
   return function (mail, callback) {
