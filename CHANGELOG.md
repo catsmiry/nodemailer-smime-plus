@@ -1,3 +1,7 @@
+## 1.3.0
+
+* converted to module
+
 ## 1.2.2
 
 * Upgraded all dependencies to their latest versions

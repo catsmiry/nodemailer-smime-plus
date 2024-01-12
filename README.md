@@ -14,19 +14,19 @@ Install from npm
 Load the `nodemailer-smime-plus` plugin
 
 ```javascript
-const smime = require('nodemailer-smime-plus');
+import smime from 'nodemailer-smime-plus';
 ```
 
 Attach it as a 'stream' handler for a nodemailer transport object
 
 ```javascript
 const options = {
-    cert: '<PEM formatted cert>',
-    chain: [
-      '<PEM formatted cert>'
-    ],
-    key: '<PEM formatted key>'
-}
+  cert: '<PEM formatted cert>',
+  chain: [
+    '<PEM formatted cert>',
+  ],
+  key: '<PEM formatted key>',
+};
 transporter.use('stream', smime(options));
 ```
 
@@ -39,21 +39,22 @@ transporter.use('stream', smime(options));
 ## Example
 
 ```javascript
-const nodemailer = require('nodemailer');
-const smime = require('nodemailer-smime-plus');
+import nodemailer from 'nodemailer';
+import smime from 'nodemailer-smime-plus';
+
 const transporter = nodemailer.createTransport();
 const options = {
-    cert: '<PEM formatted cert>',
-    chain: [
-      '<PEM formatted cert>'
-    ],
-    key: '<PEM formatted key>'
-}
+  cert: '<PEM formatted cert>',
+  chain: [
+    '<PEM formatted cert>',
+  ],
+  key: '<PEM formatted key>',
+};
 transporter.use('stream', smime(options));
 transporter.sendMail({
-    from: 'me@example.com',
-    to: 'receiver@example.com',
-    html: '<b>Hello world!</b>'
+  from: 'me@example.com',
+  to: 'receiver@example.com',
+  html: '<b>Hello world!</b>'
 });
 ```
 
