@@ -78,7 +78,7 @@ export default function (options) {
 }
 
 function canonicalTransform(node) {
-  if (node.getHeader('content-type').slice(0, 5) === 'text/' && node.content) {
+  if (node.getHeader('content-type').slice(0, 5) === 'text/' && typeof node.content === 'string') {
     node.content = node.content.replace(/\r\n|\r|\n/g, '\r\n');
   }
   node.childNodes.forEach(canonicalTransform);
