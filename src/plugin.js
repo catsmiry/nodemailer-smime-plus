@@ -1,7 +1,7 @@
-import forge from 'node-forge';
-import MimeNode from 'nodemailer/lib/mime-node/index.js';
+const forge = require('node-forge');
+const MimeNode = require('nodemailer/lib/mime-node/index.js');
 
-export default function (options) {
+module.exports = function (options) {
   return function (mail, callback) {
     // Create new root node
     const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
