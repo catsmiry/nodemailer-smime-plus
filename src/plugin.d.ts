@@ -1,4 +1,4 @@
-declare module 'nodemailer-smime-plus' {
+declare module '@miry/nodemailer-smime-plus' {
   import forge from 'node-forge';
   import { PluginFunction } from 'nodemailer/lib/mailer';
 
