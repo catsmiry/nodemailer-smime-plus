@@ -38,7 +38,7 @@ module.exports = function (options) {
         try {
           const p12Buffer = fs.readFileSync(options.cert);
           const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
-          const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.p12Password); // p12Passwordはパスワード
+          const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // keyはパスワード
           
           // Extract certificates and private key
           const keySafeContents = p12.safeContents;
