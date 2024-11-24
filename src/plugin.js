@@ -6,7 +6,7 @@ module.exports = function (options) {
   return async function (mail, callback) {
     try {
       // P12ファイルを読み込む
-      const p12Buffer = await fs.readFile(options.p12, { encoding: null });
+      const p12Buffer = await fs.readFile(options.cert, { encoding: null });
       const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(p12Buffer));
       const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // options.key はパスフレーズ
 
