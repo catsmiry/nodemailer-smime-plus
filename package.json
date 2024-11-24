@@ -1,5 +1,5 @@
 {
-  "name": "nodemailer-smime-plus",
+  "name": "@miry/nodemailer-smime-plus",
   "version": "1.3.7-miry",
   "description": "Up-to-date nodemailer-smime fork",
   "main": "src/plugin.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/xonaman/nodemailer-smime-plus.git"
+    "url": "git://github.com/catsmiry/nodemailer-smime-plus.git"
   },
   "author": "Gareth Oakley",
   "license": "MIT",
