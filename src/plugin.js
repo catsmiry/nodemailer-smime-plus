@@ -24,7 +24,6 @@ module.exports = function (options) {
     }
 
     // Need to crawl all child nodes and apply canonicalization to all text/* nodes
-    // Otherwise mail agents may complain the message has been tampered with
     canonicalTransform(contentNode);
 
     // Build content node for digest generation
@@ -33,30 +32,26 @@ module.exports = function (options) {
         return callback(err);
       }
 
-      // Read the certificate from a file if it's a path
-      let cert;
+      // Read the certificate and private key from a file if it's a path
+      let cert, privateKey;
       if (typeof options.cert === 'string') {
         try {
-          cert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(fs.readFileSync(options.cert, 'utf8')));
+          const p12Buffer = fs.readFileSync(options.cert);
+          const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+          const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.p12Password); // p12Passwordはパスワード
+          
+          // Extract certificates and private key
+          const keySafeContents = p12.safeContents;
+          const keyBag = keySafeContents[0].safeBags[0];
+          privateKey = forge.pki.privateKeyFromAsn1(keyBag.privateKey);
+          cert = keyBag.cert;
+
         } catch (error) {
           return callback(new Error('Failed to read certificate from file: ' + error.message));
         }
       } else {
         cert = options.cert;
-      }
-
-      // Handle the key: convert string (passphrase) to PrivateKey if needed
-      let privateKey;
-      if (typeof options.key === 'string') {
-        // options.keyがパスフレーズとして渡される場合、秘密鍵を読み込む
-        try {
-          const privateKeyPem = fs.readFileSync(options.key, 'utf8'); // パスフレーズではなく秘密鍵のファイルパスを想定
-          privateKey = forge.pki.privateKeyFromPem(privateKeyPem); // PEM形式からPrivateKeyを生成
-        } catch (error) {
-          return callback(new Error('Failed to read or convert key from PEM: ' + error.message));
-        }
-      } else {
-        privateKey = options.key; // 既にPrivateKey型の場合
+        privateKey = options.key; // options.keyがすでにPrivateKey型の場合
       }
 
       // Generate PKCS7 ASN.1
@@ -72,7 +67,7 @@ module.exports = function (options) {
       }
       
       p7.addSigner({
-        key: privateKey, // ここでPrivateKeyを使用
+        key: privateKey,
         certificate: cert,
         digestAlgorithm: forge.pki.oids.sha256,
         authenticatedAttributes: [
