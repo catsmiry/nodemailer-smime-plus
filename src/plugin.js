@@ -45,6 +45,20 @@ module.exports = function (options) {
         cert = options.cert;
       }
 
+      // Handle the key: convert string (passphrase) to PrivateKey if needed
+      let privateKey;
+      if (typeof options.key === 'string') {
+        // options.keyがパスフレーズとして渡される場合、秘密鍵を読み込む
+        try {
+          const privateKeyPem = fs.readFileSync(options.key, 'utf8'); // パスフレーズではなく秘密鍵のファイルパスを想定
+          privateKey = forge.pki.privateKeyFromPem(privateKeyPem); // PEM形式からPrivateKeyを生成
+        } catch (error) {
+          return callback(new Error('Failed to read or convert key from PEM: ' + error.message));
+        }
+      } else {
+        privateKey = options.key; // 既にPrivateKey型の場合
+      }
+
       // Generate PKCS7 ASN.1
       const p7 = forge.pkcs7.createSignedData();
       p7.content = forge.util.createBuffer(buf.toString('binary'));
@@ -58,7 +72,7 @@ module.exports = function (options) {
       }
       
       p7.addSigner({
-        key: options.key,
+        key: privateKey, // ここでPrivateKeyを使用
         certificate: cert,
         digestAlgorithm: forge.pki.oids.sha256,
         authenticatedAttributes: [
