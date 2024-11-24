@@ -32,21 +32,25 @@ module.exports = function (options) {
         return callback(err);
       }
 
-      // Read the certificate and private key from a file
+      // Read the P12 file
       let cert;
       let privateKey;
-      if (typeof options.cert === 'string') {
+      if (typeof options.p12 === 'string' && typeof options.key === 'string') {
         try {
-          const certPem = fs.readFileSync(options.cert, 'utf8');
-          // PEM から証明書と秘密鍵を分離する
-          const pems = forge.pki.pemToAsn1(certPem);
-          cert = forge.pki.certificateFromAsn1(pems[0]);
-          privateKey = forge.pki.decryptPrivateKey(pems[1], options.key); // options.key はパスフレーズ
+          const p12Buffer = fs.readFileSync(options.p12);
+          const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+          const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // options.key はパスフレーズ
+
+          const bags = p12.getBags({ bagType: forge.pki.oids.certBag });
+          cert = bags[forge.pki.oids.certBag][0].cert;
+
+          const privateKeyBags = p12.getBags({ bagType: forge.pki.oids.keyBag });
+          privateKey = privateKeyBags[forge.pki.oids.keyBag][0].key;
         } catch (error) {
-          return callback(new Error('Failed to read certificate or private key from file: ' + error.message));
+          return callback(new Error('Failed to read P12 file: ' + error.message));
         }
       } else {
-        return callback(new Error('Certificate path must be provided as a string'));
+        return callback(new Error('P12 path and key must be provided as strings'));
       }
 
       // Generate PKCS7 ASN.1
@@ -89,7 +93,7 @@ module.exports = function (options) {
       const derBuffer = Buffer.from(der.getBytes(), 'binary');
 
       // Append signature node
-      const signatureNode = rootNode.createChild('application/pkcs7-signature', { filename: 'smime.p7s' });
+      const signatureNode = rootNode.createChild('application/pks7-signature', { filename: 'smime.p7s' });
       signatureNode.setContent(derBuffer);
 
       // Switch in and return new root node
