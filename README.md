@@ -1,6 +1,6 @@
 # Nodemailer plugin to sign mail using S/MIME
 
-This is an up-to-date version of the original [nodemailer-smime](https://github.com/gazoakley/nodemailer-smime)
+This is an up-to-date version of the original [nodemailer-smime](https://github.com/catsmiry/nodemailer-smime)
 package.
 
 ## Install
@@ -21,40 +21,44 @@ Attach it as a 'stream' handler for a nodemailer transport object
 
 ```javascript
 const options = {
-  cert: '<PEM formatted cert>',
-  chain: [
-    '<PEM formatted cert>',
-  ],
-  key: '<PEM formatted key>',
+  cert: '/path/to/your/certificate.p12', // Path to the PKCS#12 file
+  key: 'your_password', // Passphrase for the PKCS#12 file
 };
+
+// Use the S/MIME plugin
 transporter.use('stream', smime(options));
 ```
 
 ## Options
 
-  * `cert` - PEM formatted SMIME certificate to sign/bundle mail with
-  * `chain` - array of PEM formatted certificates to bundle
-  * `key` - PEM formatted private key associated with certificate
+* `cert` - Path to the PKCS#12 file containing the SMIME certificate used to sign/bundle the mail
+* `key` - Passphrase for the PKCS#12 file
 
 ## Example
 
 ```javascript
 import nodemailer from 'nodemailer';
-import smime from 'nodemailer-smime-plus';
+import smime from '@miry/nodemailer-smime-plus';
 
 const transporter = nodemailer.createTransport();
+
 const options = {
-  cert: '<PEM formatted cert>',
-  chain: [
-    '<PEM formatted cert>',
-  ],
-  key: '<PEM formatted key>',
+  cert: '/path/to/your/certificate.p12', // Path to the PKCS#12 file
+  key: 'your_password', // Passphrase for the PKCS#12 file
 };
+
+// Use the S/MIME plugin
 transporter.use('stream', smime(options));
+
 transporter.sendMail({
   from: 'me@example.com',
   to: 'receiver@example.com',
   html: '<b>Hello world!</b>'
+}, (error, info) => {
+  if (error) {
+    return console.error('Error sending email:', error);
+  }
+  console.log('Email sent:', info.response);
 });
 ```
 
