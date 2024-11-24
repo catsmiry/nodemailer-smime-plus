@@ -7,7 +7,7 @@ package.
 
 Install from npm
 
-    npm install nodemailer-smime-plus --save
+    npm install @miry/nodemailer-smime-plus --save
 
 ## Usage
 
