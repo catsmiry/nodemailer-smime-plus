@@ -3,8 +3,8 @@ declare module 'nodemailer-smime-plus' {
   import { PluginFunction } from 'nodemailer/lib/mailer';
 
   interface SmimeOptions {
-    cert: forge.pki.Certificate;
-    chain: forge.pki.Certificate[];
+    cert: forge.pki.Certificate | string; // 文字列の場合はファイルパス
+    chain: (forge.pki.Certificate | string)[]; // 文字列の場合はファイルパスの配列
     key: forge.pki.rsa.PrivateKey;
   }
 

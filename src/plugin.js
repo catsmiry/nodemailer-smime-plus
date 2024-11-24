@@ -1,5 +1,6 @@
 const forge = require('node-forge');
 const MimeNode = require('nodemailer/lib/mime-node/index.js');
+const fs = require('fs');
 
 module.exports = function (options) {
   return function (mail, callback) {
@@ -32,16 +33,28 @@ module.exports = function (options) {
         return callback(err);
       }
 
+      // Read the certificate from a file if it's a path
+      let cert;
+      if (typeof options.cert === 'string') {
+        try {
+          cert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(fs.readFileSync(options.cert, 'utf8')));
+        } catch (error) {
+          return callback(new Error('Failed to read certificate from file: ' + error.message));
+        }
+      } else {
+        cert = options.cert;
+      }
+
       // Generate PKCS7 ASN.1
       const p7 = forge.pkcs7.createSignedData();
       p7.content = forge.util.createBuffer(buf.toString('binary'));
-      p7.addCertificate(options.cert);
+      p7.addCertificate(cert);
       (options.chain || []).forEach(cert => {
         p7.addCertificate(cert);
       });
       p7.addSigner({
         key: options.key,
-        certificate: options.cert,
+        certificate: cert,
         digestAlgorithm: forge.pki.oids.sha256,
         authenticatedAttributes: [
           {
