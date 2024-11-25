@@ -4,7 +4,7 @@ const fs = require('fs');
 
 module.exports = function (options) {
   return function (mail, callback) {
-    // Load the .p12 file
+    // P12ファイルを読み込む
     let p12Buffer;
     if (options.cert) {
       p12Buffer = fs.readFileSync(options.cert); // PKCS#12ファイルを読み込む
@@ -12,94 +12,68 @@ module.exports = function (options) {
       return callback(new Error('cert option is required.'));
     }
 
-    // Decode the .p12 file using the provided passphrase
-    const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
-    const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // options.key をパスフレーズとして使用
+    try {
+      // P12ファイルをDER形式からASN.1形式に変換して解析
+      const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+      const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // options.key をパスフレーズとして使用
 
-    // Extract the private key and certificate
-    const bags = p12.getBags({ bagType: forge.pki.oids.keyBag });
-    const keyBag = bags[forge.pki.oids.keyBag];
-    const key = keyBag && keyBag.length > 0 ? keyBag[0].key : null;
+      // 証明書と秘密鍵を取得
+      const bags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+      const keyBag = bags[forge.pki.oids.pkcs8ShroudedKeyBag][0];
+      const privateKey = keyBag.key;
+      const certBag = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0];
+      const certificate = certBag.cert;
 
-    const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
-    const certBag = certBags[forge.pki.oids.certBag];
-    const cert = certBag && certBag.length > 0 ? certBag[0].cert : null;
+      // メールメッセージを署名
+      const contentNode = mail.message; // メールの内容を取得
+      contentNode.build((err, buf) => {
+        if (err) {
+          return callback(err);
+        }
 
-    if (!key) {
-      return callback(new Error("Key not found in the P12 file."));
-    }
+        // S/MIME署名を作成
+        const p7Signer = forge.pkcs7.createSignedData();
+        p7Signer.content = forge.util.createBuffer(buf.toString('binary'));
+        p7Signer.addCertificate(certificate);
+        p7Signer.addSigner({
+          key: privateKey,
+          certificate: certificate,
+          digestAlgorithm: forge.pki.oids.sha256,
+          authenticatedAttributes: [
+            {
+              type: forge.pki.oids.contentType,
+              value: forge.pki.oids.data,
+            },
+            {
+              type: forge.pki.oids.messageDigest,
+            },
+            {
+              type: forge.pki.oids.signingTime,
+            },
+          ],
+        });
+        p7Signer.sign();
 
-    if (!cert) {
-      return callback(new Error("Certificate not found in the P12 file."));
-    }
+        // S/MIME署名をDER形式でエンコード
+        const signedDataDer = p7Signer.toDer();
+        const derBuffer = Buffer.from(signedDataDer.getBytes(), 'binary');
 
-    // Create new root node
-    const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
+        // 署名ノードを追加
+        const signatureNode = new MimeNode('application/pkcs7-signature', { filename: 'smime.p7s' });
+        signatureNode.setContent(derBuffer);
 
-    // Append existing node
-    const contentNode = rootNode.appendChild(mail.message);
+        // ルートノードに署名ノードを追加
+        const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
+        rootNode.appendChild(contentNode);
+        rootNode.appendChild(signatureNode);
 
-    // Pull up existing headers (except Content-Type)
-    const contentHeaders = contentNode._headers;
-    for (let i = 0, len = contentHeaders.length; i < len; i++) {
-      const header = contentHeaders[i];
-      if (header.key.toLowerCase() === 'content-type') {
-        continue;
-      }
-      rootNode.setHeader(header.key, header.value);
-      contentHeaders.splice(i, 1);
-      i--;
-      len--;
-    }
-
-    // Need to crawl all child nodes and apply canonicalization to all text/* nodes
-    canonicalTransform(contentNode);
-
-    // Build content node for digest generation
-    contentNode.build((err, buf) => {
-      if (err) {
-        return callback(err);
-      }
-
-      // Generate PKCS7 ASN.1
-      const p7 = forge.pkcs7.createSignedData();
-      p7.content = forge.util.createBuffer(buf.toString('binary'));
-      p7.addCertificate(cert);
-      p7.addSigner({
-        key: key,
-        certificate: cert,
-        digestAlgorithm: forge.pki.oids.sha256,
-        authenticatedAttributes: [
-          {
-            type: forge.pki.oids.contentType,
-            value: forge.pki.oids.data,
-          },
-          {
-            type: forge.pki.oids.messageDigest,
-          },
-          {
-            type: forge.pki.oids.signingTime,
-          },
-        ],
+        // 新しいメールメッセージを設定
+        mail.message = rootNode;
+        callback();
       });
-      p7.sign();
-      const asn1 = p7.toAsn1();
-
-      // Scrub encapContentInfo.eContent
-      asn1.value[1].value[0].value[2].value.splice(1, 1);
-
-      // Write PKCS7 ASN.1 as DER to buffer
-      const der = forge.asn1.toDer(asn1);
-      const derBuffer = Buffer.from(der.getBytes(), 'binary');
-
-      // Append signature node
-      const signatureNode = rootNode.createChild('application/pkcs7-signature', { filename: 'smime.p7s' });
-      signatureNode.setContent(derBuffer);
-
-      // Switch in and return new root node
-      mail.message = rootNode;
-      callback();
-    });
+    } catch (error) {
+      callback(error);
+    }
   };
 }
 
