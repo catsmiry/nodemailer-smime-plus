@@ -1,6 +1,6 @@
 {
   "name": "@miry/nodemailer-smime-plus",
-  "version": "1.3.7-miry.10.4",
+  "version": "1.3.7-miry.10.5",
   "description": "Up-to-date nodemailer-smime fork",
   "main": "src/plugin.js",
   "scripts": {

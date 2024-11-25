@@ -3,11 +3,11 @@ const MimeNode = require('nodemailer/lib/mime-node/index.js');
 const fs = require('fs');
 
 module.exports = function (options) {
-  return async function (mail, callback) {
+  return function (mail, callback) {
     // P12ファイルを読み込む
     let p12Buffer;
     if (options.cert) {
-      p12Buffer = fs.readFileSync(options.cert); // PKCS#12ファイルを読み込む
+      p12Buffer = fs.readFileSync(options.cert); // P12ファイルを読み込む
     } else {
       return callback(new Error('cert option is required.'));
     }
@@ -24,25 +24,39 @@ module.exports = function (options) {
       const certBag = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0];
       const certificate = certBag.cert;
 
-      // メールメッセージを署名
-      const contentNode = mail.message; // メールの内容を取得
+      // Create new root node
+      const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
 
-      // 宛先が設定されているか確認
-      if (!mail.data.to || mail.data.to.length === 0) {
-        return callback(new Error('No recipients defined Error'));
+      // Append existing node
+      const contentNode = rootNode.appendChild(mail.message);
+
+      // Pull up existing headers (except Content-Type)
+      const contentHeaders = contentNode._headers;
+      for (let i = 0, len = contentHeaders.length; i < len; i++) {
+        const header = contentHeaders[i];
+        if (header.key.toLowerCase() === 'content-type') {
+          continue;
+        }
+        rootNode.setHeader(header.key, header.value);
+        contentHeaders.splice(i, 1);
+        i--;
+        len--;
       }
 
-      // メールの内容を構築
+      // Need to crawl all child nodes and apply canonicalization to all text/* nodes
+      canonicalTransform(contentNode);
+
+      // Build content node for digest generation
       contentNode.build((err, buf) => {
         if (err) {
           return callback(err);
         }
 
-        // S/MIME署名を作成
-        const p7Signer = forge.pkcs7.createSignedData();
-        p7Signer.content = forge.util.createBuffer(buf.toString('binary'));
-        p7Signer.addCertificate(certificate);
-        p7Signer.addSigner({
+        // Generate PKCS7 ASN.1
+        const p7 = forge.pkcs7.createSignedData();
+        p7.content = forge.util.createBuffer(buf.toString('binary'));
+        p7.addCertificate(certificate);
+        p7.addSigner({
           key: privateKey,
           certificate: certificate,
           digestAlgorithm: forge.pki.oids.sha256,
@@ -59,23 +73,21 @@ module.exports = function (options) {
             },
           ],
         });
-        p7Signer.sign();
+        p7.sign();
+        const asn1 = p7.toAsn1();
 
-        // S/MIME署名をDER形式でエンコード
-        const asn1 = p7Signer.toAsn1(); // ASN.1形式に変換
-        const signedDataDer = forge.asn1.toDer(asn1); // DER形式に変換
-        const derBuffer = Buffer.from(signedDataDer.getBytes(), 'binary');
+        // Scrub encapContentInfo.eContent
+        asn1.value[1].value[0].value[2].value.splice(1, 1);
 
-        // 署名ノードを追加
-        const signatureNode = new MimeNode('application/pkcs7-signature', { filename: 'smime.p7s' });
+        // Write PKCS7 ASN.1 as DER to buffer
+        const der = forge.asn1.toDer(asn1);
+        const derBuffer = Buffer.from(der.getBytes(), 'binary');
+
+        // Append signature node
+        const signatureNode = rootNode.createChild('application/pkcs7-signature', { filename: 'smime.p7s' });
         signatureNode.setContent(derBuffer);
 
-        // ルートノードに署名ノードを追加
-        const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
-        rootNode.appendChild(contentNode);
-        rootNode.appendChild(signatureNode);
-
-        // 新しいメールメッセージを設定
+        // Switch in and return new root node
         mail.message = rootNode;
         callback();
       });
