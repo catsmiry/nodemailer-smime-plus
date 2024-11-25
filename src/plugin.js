@@ -55,7 +55,8 @@ module.exports = function (options) {
         p7Signer.sign();
 
         // S/MIME署名をDER形式でエンコード
-        const signedDataDer = p7Signer.toDer();
+        const asn1 = p7Signer.toAsn1(); // ASN.1形式に変換
+        const signedDataDer = forge.asn1.toDer(asn1); // DER形式に変換
         const derBuffer = Buffer.from(signedDataDer.getBytes(), 'binary');
 
         // 署名ノードを追加
