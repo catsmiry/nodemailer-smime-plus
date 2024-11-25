@@ -3,7 +3,7 @@ const MimeNode = require('nodemailer/lib/mime-node/index.js');
 const fs = require('fs');
 
 module.exports = function (options) {
-  return function (mail, callback) {
+  return async function (mail, callback) {
     // P12ファイルを読み込む
     let p12Buffer;
     if (options.cert) {
@@ -26,6 +26,13 @@ module.exports = function (options) {
 
       // メールメッセージを署名
       const contentNode = mail.message; // メールの内容を取得
+
+      // 宛先が設定されているか確認
+      if (!mail.data.to || mail.data.to.length === 0) {
+        return callback(new Error('No recipients defined Error'));
+      }
+
+      // メールの内容を構築
       contentNode.build((err, buf) => {
         if (err) {
           return callback(err);
