@@ -17,8 +17,21 @@ module.exports = function (options) {
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, options.key); // options.key をパスフレーズとして使用
 
     // Extract the private key and certificate
-    const key = p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag][0].key;
-    const cert = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert;
+    const bags = p12.getBags({ bagType: forge.pki.oids.keyBag });
+    const keyBag = bags[forge.pki.oids.keyBag];
+    const key = keyBag && keyBag.length > 0 ? keyBag[0].key : null;
+
+    const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+    const certBag = certBags[forge.pki.oids.certBag];
+    const cert = certBag && certBag.length > 0 ? certBag[0].cert : null;
+
+    if (!key) {
+      return callback(new Error("Key not found in the P12 file."));
+    }
+
+    if (!cert) {
+      return callback(new Error("Certificate not found in the P12 file."));
+    }
 
     // Create new root node
     const rootNode = new MimeNode('multipart/signed; protocol="application/pkcs7-signature"; micalg=sha256;');
